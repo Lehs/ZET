@@ -29,12 +29,12 @@ power# \ n -- | s -- {t∈p(s): |t|=n }
 
 multiunion \ -- | {s1,s2,...,sn} -- s1⋃s2⋃...⋃sn
 
+card \ -- |s| | s --   cardinality
+
 In interpretation mode there also is a word |:
 
 { 1 100 | prime } cr zet.
 
 {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97} ok
 
-{ 1 100 | pairprime } cr zet.
-
-{3,5,7,11,13,17,19,29,31,41,43,59,61,71,73} ok
+{ 1 10000 | pairprime } card . 409  ok
