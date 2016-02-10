@@ -31,6 +31,10 @@ multiunion \ -- | {s1,s2,...,sn} -- s1⋃s2⋃...⋃sn
 
 card \ -- |s| | s --   cardinality
 
+@split \ ad --   ad=yst, zst   split the (non empty) top set/list into tail set and head object
+
+@obj \ ad -- i   ad=xst, yst, zst  i=0 if top of stack is a number, 1 if vector and 2 if non empty set
+
 In interpretation mode there also is a word |:
 
 { 1 100 | prime } cr zet.
