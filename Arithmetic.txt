@@ -1,0 +1,105 @@
+Single cell computational arithmetic 
+
+To manage single cell computational arithmetic there is a need for words as:
+
+ugcd ( a b -- c )  unsigned-greatest-common-divisor
+where a and b are unsigned single cell numbers and c is their greatest common divisor.
+
+u*mod ( a b m -- c )  unsigned-star-mod
+where a b m are any unsigned single cell numbers and the result is the single cell number c=a*b(mod m).
+
+u**mod ( b a m -- c )  unsigned-power-mod
+as above but where c=b^a(mod m).
+
+invmod ( a m -- c )  signed-invers-mod
+here 0<a<m and m is a signed number relative prime to a. The result c is a number 0<c<m such that a*c(mod m)=1.
+
+It should be possible to compute the numbers above for any single number arguments (in the case below in 64bit-systems):
+
+1234567890123456789 987654321098765432 123123123123123123 u**mod  ok 
+. 1321916066429949  ok
+
+The usual single number arithmetic + - * / */ etc. aren't powerful enough but there are standard Forth words which are:
+
+um* ( b  a-- ud )  where a b are unsigned singles and ud is an unsigned double
+
+um/mod ( ud u -- r q )  where r is the rest and q is the quote
+
+m*/ ( d a b -- d' )  where d'=d*a/b, d d' dubble cell numbers
+
+Greatest common divisor
+: ugcd 0 loc{ a b t -- c }     \ Algorithm from Wikipedia
+  a b u< if a b to a to b then \ a>=b as unsigned numbers
+  begin b                      \ while b<>0
+  while b to t                 \ t <- b
+     a 0 b um/mod drop to b    \ b <- a(mod b)
+     t to a                    \ a <- t
+  repeat a ;
+
+: ugcd ( a b -- c )     \ a version without local variables
+  2dup u< if swap then  \ smallest of a b on top of stack (tos)
+  ?dup 0= if exit then  \ return second value if tos is zero
+  begin tuck            \ y x y  first time b a b
+     0 swap um/mod      \ y x 0 y --> y r q
+     drop dup 0=        \ y r [r=0]
+  until drop ;          \ y
+
+The word um/mod has the stackdiagram ( ud u -- r q ) and is used above to calculate a(mod b). The single unsigned number a is converted to a double by putting a zero on the top of a. The word ?dup duplicates the top of stack if it isn't zero.
+
+
+Modular multiplication
+: u*mod ( u1 u2 u3 -- u4 )
+  >r r@ umod swap r@ umod um*
+  r> um/mod drop ;
+
+Here m is stored in the return stack:
+
+>r ( a -- )  tos is popped from stack and pushed to r-stack
+r> ( -- a )  r-stack is popped and a is pushed to the parameterstack
+r@ ( -- a )  a copy of a is pushed on parameterstack without popping
+
+Modular exponentiation
+
+Below lshift ( m i -- n ) n=m*2^i and rshift ( m i -- n ) n=m/2^i
+
+are standard words and log~ is defined (bits gives the maximal number of bits in one cell):
+
+cell 8 * constant bits
+
+: log~ ( n -- nr )      \ nr = 1+²log n
+  bits here !           \ bits is stored at the address 'here'
+  bits 0                \ do-loop from i=0,...,bits-1
+  do 1 rshift ?dup 0=   \ shift tos at right test if zero
+     if i 1+ here !     \ if zero store i+1 at 'here'
+        leave           \ and leave the loop
+      then 
+  loop here @ ;
+
+: u**mod loc{ b a m -- x }
+  1                     \ preparation for repeated multiplication
+  a log~ 0              \ n 0  n is the number of binary digits in a
+  ?do a 1 i lshift and  \ flag  the i-th digit of a is 0/1
+     if b m u*mod       \ multiply if flag
+     then b dup m       \ square b for each i: b b^2 b^4 b^8 ...
+     u*mod to b         \ new squared number to b
+  loop ;                \ result of the repeated multiplication
+
+The algorithm is called square-and-multiply. See http://forthmath.blogspot.se/2015/10/single-cell-computational-arithmetic-1.html
+
+The ?do-loop differs from do-loop in that there is an initial check with ?do, while with do the calculation between do and loop always is done at least once.
+
+Modular inverse
+: invmod ( a m -- a' )  \ a m must be coprime
+  dup 1 0 loc{ a m v b c -- a' }
+  begin a
+  while v a / >r
+     c b s>d c s>d r@ 1 m*/ d- d>s to c to b  \ old c become new b
+     a v s>d a s>d r> 1 m*/ d- d>s to a to v  \ old a become new v
+  repeat b m mod dup to b 0<
+  if m b + else b then ;
+
+The words s>d and d>s converts between single and double signed integers.
+
+1234567890123456789 123123123123123133 2dup ugcd . 1  ok
+2dup invmod dup . 94365978201029936 ok
+swap u*mod . 1 ok
