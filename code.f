@@ -719,7 +719,7 @@ cell 1- log~ constant cellshift
 
 : showx xst stack-depth if xst> >r recurse r> dup . >xst then ;
 : showy yst stack-depth if yst> >r recurse r> dup . >yst then ;
-: showx zst stack-depth if zst> >r recurse r> dup . >zst then ;
+: showz zst stack-depth if zst> >r recurse r> dup . >zst then ;
 
 : >zet ( s -- | -- s)  >>yst yst> dup >r cs 0 ?do yst> >zst loop r> >zst ;
 : zet> ( -- s | s -- )  zst> dup >r cs 0 ?do zst> >xst loop r> >xst xst>> ;
