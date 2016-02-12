@@ -1,0 +1,89 @@
+Integer factoring 
+
+Factoring of large integers is a great challenge in computational mathematics.
+
+When the numbers are very large, no efficient, non-quantum integer factorization algorithm is known; an effort by several researchers concluded in 2009, factoring a 232-digit number (RSA-768), utilizing hundreds of machines over a span of two years. Wikipedia
+However, there are efficient and simple algorithms for cell size numbers (about 19 digit numbers in 64 bit systems) that immediately delivers the prime factorization. One such algorithm is Pollard rho method.
+
+: func ( numb n -- m ) dup um* 1 0 d+ rot um/mod drop ; 
+
+: pollard1 ( numb start -- pfac flag ) \ numb is an odd composite 
+  dup dup loc{ numb start alpha beta } 0
+  begin drop numb alpha func to alpha
+     numb dup beta func func to beta
+     alpha beta - abs        \ |alpha-beta|
+     numb ugcd dup numb =    \ gcd flag 
+     if false exit 
+     then dup 1 = 0=         \ gcd<>1 
+  until true ;
+
+: sqrtf \ m -- n             \ floor
+  0 d>f fsqrt f>s ;
+
+: sqrtfslow \ m -- n
+  dup 4 u< if dup
+  if drop 1 then exit then
+  dup 1- >r 1 rshift
+  begin r@ over 0 swap um/mod nip
+     over + 1 rshift tuck u> 0=
+  until r> drop ;
+
+: sqrtc \ m -- n             \ ceiling
+  1- sqrtf 1+ ;
+
+: pollard2 \ numb -- prime numb>1
+  dup 1 and 0= if drop 2 exit then
+  dup prime if exit then
+  dup sqrtf dup * over = 
+  if sqrtf exit then -1 2    \ numb 100 0
+  do dup i pollard1          \ numb pfac flag
+     if leave                \ numb pfac
+     then drop               \ numb
+  loop nip ;                 \ pfac
+
+: pollard \ n -- p1 ... pk      
+  dup pollard2 2dup =        \ n q f=
+  if drop exit               \ n
+  then dup >r 
+  0 swap um/mod nip recurse  \ q n/q
+  r> recurse ;
+
+4267640728818788929 pollard .s 1234567891 3456789019  ok
+
+12345678987654321 pollard cr .s 
+333667 37 3 3 333667 37 3 3  ok
+
+Sometimes the greatest prime factor is of interest and I guess there is no other way to find it than factoring and sorting the stack.
+
+: lower \ m1 ... mn m n+1 -- m1 ... m ... mi n+1  
+\ lower m on stack until next number not is greater
+  dup 2 =
+  if drop 2dup u>
+     if swap
+     then 2 exit
+  then >r 2dup u> 0= 
+  if r> exit
+  then r> rot >r 
+  1- recurse 1+ r> swap ;
+
+: sort \ m1 ... mn n -- s1 ... sn n  o(n²)
+  dup 3 <
+  if dup 2 =
+     if drop 2dup u> 
+        if swap 
+        then 2 
+     then exit
+  then dup >r
+  1- recurse roll 
+  r> lower ;
+
+But to use sort one have to know the number of factors to sort.
+
+: pollard# \ numb -- p1 ... pk k
+  depth >r
+  pollard depth r> - 1+ ;
+
+12345678987654321 pollard# cr .s
+333667 37 3 3 333667 37 3 3 8  ok
+sort .s 3 3 3 3 37 37 333667 333667 8  ok
+over . 333667  ok
