@@ -1,0 +1,169 @@
+Prime tables and the prime counting function 
+
+The only possibility for a very fast prime counting function is to make tables. To make a straight forward table would take a lot of time and a lot of memory, but a table of primes is more compact, is loading faster and can be used for fast prime counting.
+
+It's possible to store consecutive prime series in tables using only two bytes per prime number up to virtually any size (at least 100 decimals or so), with a technique using that the prime gaps for those numbers are less than 65536=2^16. What's stored in the main table are the prime numbers modulo 65536 - and in a minor table "break points" are stored: the number n when the next prime Pn+1 divided with 65536 is greater than the same for the previous prime. A fast search in the minor table gives the index number, that multiplied with 65536 should be added to the number in the main table to get the prime.
+
+Such a table for all primes less than 2^24 is created in less than a second and can be used to compute π(x) for x<16777216 in a few microseconds. The memory needed for the main table is 2*π(16777216)=2*1077871, slightly more than 2 Mb, and for the minor table 1-2 kb if the break points are stored as single integers. The memory saved is near 50 % in this case, but for larger tables the memory saved will be 100 % or more.
+
+Making a table for all 64 bit primes would need about 5 billion Gb. All 32 bit primes would need about 1 Gb. All primes less than 100,000,000 would need about 10 Mb and would take some time to load (about 5 seconds). For greater values it's more realistic to use other and slower methods, like files with records of primes and their order numbers, with one second computing time gap in between.
+
+First some words that is used:
+
+: prevprime ( numb -- prime )
+  dup 3 u< if drop 2 exit then
+  1- 1 or 
+  begin dup fermat-rabin-miller 0=
+  while 2 -
+  repeat ;
+
+: ?def ( -- flag )  bl word find nip 0= ;
+
+?def under+ [if]
+: under+ ( a b c -- a+c b )  rot + swap ; [then]
+
+: 8/mod ( n -- r q )  dup 7 and swap 3 rshift ;
+: 256/mod ( n -- r q )  dup 255 and swap 8 rshift ;
+: 65536/mod ( n -- r q )  dup 65535 and swap 16 rshift ;
+
+The idea is to use the sieve of Eratosthenes to create av very fast word prime_ ( n -- flag ) and bit arrays is used.
+
+\ bit arrays
+
+: adbit ( i ad -- j a )  swap 8/mod rot + ;
+
+: setbit \ i ad --
+  adbit 1 rot lshift over c@ or swap c! ;
+
+: tglbit \ i ad --
+  adbit 1 rot lshift over c@ xor swap c! ;
+
+: clrbit \ i ad --
+  adbit 1 rot lshift 255 xor over c@ and swap c! ;
+
+: bit@ \ i ad -- bit
+  adbit c@ swap rshift 1 and ;
+
+: bit! \ bit i ad --
+  rot if setbit else clrbit then ;
+
+: bit? ( i ad -- f )  bit@ negate ;
+
+\ Defining named bitarrays i.e.
+\ 1000000 bitarray megaset constant megasetbuffer
+: bitarray \ bits -- ad | n -- bit
+  8/mod swap 0= 0= negate + allocate throw
+  create dup ,
+  does> @ swap 8/mod rot + bit@ ;
+
+For storing numbers in i=2,3,... bytes spaces I use the words 
+
+mb! ( n ad i -- ) 
+
+and 
+
+mb@ ( ad i -- n ) 
+
+\ multiple byte read/write in arrays
+
+variable ebuf
+1 ebuf ! ebuf c@ negate
+[if] \ little-endian, as in Windows and Android
+: mb! ( n ad i -- )  2>r ebuf ! ebuf 2r> cmove ;
+: mb@ ( ad i -- n )  ebuf 0 over ! swap cmove ebuf @ ;
+[else] \ big-endian, as in MacOS
+: mb! ( n ad i -- )  2>r ebuf ! ebuf cell + r@ - 2r> cmove ;
+: mb@ ( ad i -- n )  ebuf 0 over ! cell + over - swap cmove ebuf @ ;
+[then]
+
+The tables
+The method below can be used for any number of primes. Here plim=2^24 and pi_plim=π(plim)=1077871.
+See http://forthmath.blogspot.se/2015/12/prime-tables-and-prime-counting-function.html
+
+\ the sieve of Eratosthenes 
+16777215 constant plim
+1077871 constant pi_plim
+\ 100000000 constant plim     \ 100000000  takes 6 times 
+\ 5761455 constant pi_plim    \ longer time to load
+
+plim bitarray prime_ constant pbuf
+\ prime_ ( n -- flag )  n<plim
+
+: resetsieve ( -- )
+  pbuf plim 8/mod swap 0= 0= - + pbuf 
+  do true i ! cell +loop ;
+
+: sieve ( -- )
+  resetsieve
+  0 pbuf clrbit 
+  1 pbuf clrbit
+  plim sqrtf 1+ 2
+  do i pbuf bit@
+     if plim 1+ i dup *
+        do i pbuf clrbit j +loop
+     then 
+  loop ; \ takes approximate 3 seconds or less to load
+
+Next improvement of the prime functions:
+
+plim prevprime constant pmax_
+
+: nextprime_ ( numb -- prime )  \ numb<pmax_
+  dup 3 u< if drop 2 exit then
+  1 or
+  begin dup prime_ 0=
+  while 2 +
+  repeat ;
+
+: prevprime_ ( numb -- prime )
+  dup 3 u< if drop 2 exit then
+  1- 1 or 
+  begin dup prime_ 0=
+  while 2 -
+  repeat ;
+
+: prime ( n -- flag )
+  dup plim u> if prime else prime_ negate then ;
+
+: nextprime ( numb -- prime )
+  dup pmax_ u< if nextprime_ else nextprime then ;
+
+: prevprime ( numb -- prime )
+  dup plim u< if prevprime_ else prevprime then ;
+
+It takes less than a second to store all primes less than plim=2^24 in the buffer pnrbuf.
+
+plim 65536/mod swap 0= 0= - constant breaknumbers
+pi_plim 2* allocate throw constant pnrbuf 
+breaknumbers cells allocate throw constant breaks 
+
+: init_pnr ( -- )
+  0 pad ! 0 breaks ! 
+  1 pi_plim 1+ 1 
+  do nextprime_ dup                   \ p p
+     65536/mod pad @ = 0=             \ p r flag
+     if 1 pad +!                      \ p r
+        i 1- pad @ cells breaks + !   \ p r
+     then pnrbuf i 1- 2* + 2 mb! 1+   \ p+1
+  loop drop ; init_pnr 
+
+: newintbreaks ( i j x -- i' j' )     \ bisection search
+  >r 2dup + 2/ dup
+  cells breaks + @ r> u>              \ i j k flag 
+  if -rot nip else nip then ; 
+
+: pnr@ ( n -- p )                     \ p is n:th prime 
+  1- dup >r 2* pnrbuf + 2 mb@         \ n ≤ pi_plim
+  breaknumbers 0 
+  begin r@ newintbreaks 2dup - 2 u< 
+  until rdrop nip 16 lshift + ; 
+
+From n comes the modulo in pnrbuf and bisection search in breaks gives the index i. Then Pn=Pn(mod 2^16)+i*2^16, where 0≤i<breaknumbers.
+
+: newintpnr ( i j x -- i' j' ) 
+  >r 2dup + 2/ dup pnr@ r> u>         \ i j k flag 
+  if -rot nip else nip then ; 
+
+: pi ( x -- n ) >r pi_plim 1+ 0       \ x ≤ plim
+  begin r@ newintpnr 2dup - 2 u<      \ i j flag 
+  until rdrop nip ;
