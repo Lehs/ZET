@@ -10,3 +10,5 @@ The sets are implemented in three stacks located at 'xst', 'yst' and 'zst' as bu
 {1,2,(4,4),3,{5,6}} ok
 
 The negative integers signals for vectors (odd) or sets (even). The absolut of the signals divided by 2 gives the number of preceding integers on the stack that are included in the bundle. The parameter stack for sets is 'zst' and all words beginning with z acts on that stack. The other stacks can be manipulated by words with the prefix set, for example: 'xst setdup',  'zst yst setcopy' and yst 'set.'.
+
+Later on I will try to improve the implementation so that the sets are represented of sorted bundles, which will make it faster.
