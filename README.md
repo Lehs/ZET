@@ -1,44 +1,10 @@
 # ZET
-Nested sets with Cartesian products and a lot of arithmetical functions.
+NESTED SETS WITH CARTESIAN PRODUCTS AND A LOT OF ARITHMETICAL FUNCTIONS
 
-{ 0 1 2 } { 0 1 } cartprod zdup cr zet.
+The sets are implemented in three stacks located at 'xst', 'yst' and 'zst' as bundles on the stacks:
 
-{(2,1),(2,0),(1,1),(1,0),(0,1),(0,0)} ok
+{ 1 2 3 ( 4 4 ) 3 { 5 6 } } cr showz cr zet. /n
+1 2 4 4 -5 3 5 6 -4 -18
+{1,2,(4,4),3,{5,6}} ok
 
-powerset zdup cr zet.
-
-{0,{(2,1)},{(2,0)},{(2,1),(2,0)},{(1,1)},{(2,1),(1,1)},{(2,0),(1,1)},{(2,1),(2,0),(1,1)},{(1,0)},{(2,1),(1,0)},{(2,0),(1,0)},{(2,1),(2,0),(1,0)},{(1,1),(1,0)},{(2,1),(1,1),(1,0)},{(2,0),(1,1),(1,0)},{(2,1),(2,0),(1,1),(1,0)},{(0,1)},{(2,1),(0,1)},{(2,0),(0,1)},{(2,1),(2,0),(0,1)},{(1,1),(0,1)},{(2,1),(1,1),(0,1)},{(2,0),(1,1),(0,1)},{(2,1),(2,0),(1,1),(0,1)},{(1,0),(0,1)},{(2,1),(1,0),(0,1)},{(2,0),(1,0),(0,1)},{(2,1),(2,0),(1,0),(0,1)},{(1,1),(1,0),(0,1)},{(2,1),(1,1),(1,0),(0,1)},{(2,0),(1,1),(1,0),(0,1)},{(2,1),(2,0),(1,1),(1,0),(0,1)},{(0,0)},{(2,1),(0,0)},{(2,0),(0,0)},{(2,1),(2,0),(0,0)},{(1,1),(0,0)},{(2,1),(1,1),(0,0)},{(2,0),(1,1),(0,0)},{(2,1),(2,0),(1,1),(0,0)},{(1,0),(0,0)},{(2,1),(1,0),(0,0)},{(2,0),(1,0),(0,0)},{(2,1),(2,0),(1,0),(0,0)},{(1,1),(1,0),(0,0)},{(2,1),(1,1),(1,0),(0,0)},{(2,0),(1,1),(1,0),(0,0)},{(2,1),(2,0),(1,1),(1,0),(0,0)},{(0,1),(0,0)},{(2,1),(0,1),(0,0)},{(2,0),(0,1),(0,0)},{(2,1),(2,0),(0,1),(0,0)},{(1,1),(0,1),(0,0)},{(2,1),(1,1),(0,1),(0,0)},{(2,0),(1,1),(0,1),(0,0)},{(2,1),(2,0),(1,1),(0,1),(0,0)},{(1,0),(0,1),(0,0)},{(2,1),(1,0),(0,1),(0,0)},{(2,0),(1,0),(0,1),(0,0)},{(2,1),(2,0),(1,0),(0,1),(0,0)},{(1,1),(1,0),(0,1),(0,0)},{(2,1),(1,1),(1,0),(0,1),(0,0)},{(2,0),(1,1),(1,0),(0,1),(0,0)},{(2,1),(2,0),(1,1),(1,0),(0,1),(0,0)}} ok
-
-The number 0 also represent the empty set. The sets and the vectors are stored in a set parameter stack allocated at zst plus two help stacks at xst and yst. Sets can have sets, vectors and non negative numbers as members. Vectors can have sets, vectors and non negative numbers as components. Main set manipulation words:
-
-set= \ -- flag | s --
-
-member \ -- flag | x s --     If x is a positive number it first has to be pushed to the zst-stack manually with the word >zst
-
-subset \ -- flag | s s' -- 
-
-union \ -- | s s' -- s⋃s'
-
-intersection \ -- | s s' -- s⋂s'
-
-diff \ -- | s s' -- s\s'
-
-powerset \ -- | s -- p(s) 
-
-power# \ n -- | s -- {t∈p(s): |t|=n }
-
-multiunion \ -- | {s1,s2,...,sn} -- s1⋃s2⋃...⋃sn
-
-card \ -- |s| | s --   cardinality
-
-@split \ ad --   ad=yst, zst   split the (non empty) top set/list into tail set and head object
-
-?obj \ x -- i   zst@ ?obj gives i=0 if top of zst stack is a number, 1 if vector and 2 if non empty set
-
-In interpretation mode there also is a word |:
-
-{ 1 100 | prime } cr zet.
-
-{2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97} ok
-
-{ 1 10000 | pairprime } card . 409  ok
+The negative integers signals for vectors (odd) or sets (even). The absolut of the signals divided by 2 gives the number of preceding integers on the stack that are included in the bundle. The parameter stack for sets is 'zst' and all words beginning with z acts on that stack. The other stacks can be manipulated by words with the prefix set, for example: 'xst setdup',  'zst yst setcopy' and yst 'set.'.
