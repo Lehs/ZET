@@ -1,0 +1,158 @@
+Some arithmetical functions 
+
+The radical of a natural number is the product of all it's distinct prime factors. An easy way to calculate the radical is to factorize and sort:
+
+: radical1 ( n -- r )
+  1 dup loc{ n radical prime }
+  n pollard# sort 0 
+  do dup prime = 0=
+     if dup radical * to radical
+     then to prime 
+  loop radical ;
+
+But instead of using the local variable radical to build up the product one can use the stack:
+
+: radical2 ( n -- r )
+  1 loc{ n prime }
+  n pollard# sort 1 swap 0 \ 1 will be at tos in loop
+  do over prime =
+     if nip
+     else over to prime *
+     then 
+  loop ; 
+
+And if the code don't look for the first a occurrence of a prime factor but for the last occurrence of that factor, then there is no need for any local variables.
+
+: undequ ( a b c -- a b c f )
+  >r 2dup = r> swap ;
+
+The word undequ tests if a=b and put a flag on top of stack.
+
+: radical ( n -- r )
+  1 swap                \ a non prime dummy at bottom for undequ
+  pollard# sort
+  1 swap 0              \ 1 will be at tos in loop
+  do undequ if nip else * then
+  loop nip ;            \ nip drops the dummy
+
+The Euler totient function gives the number of positive coprimes less than the number. See http://forthmath.blogspot.se/2015/11/some-arithmetical-functions.html
+
+: totients ( n -- t )
+  1 swap                \ a non prime dummy at bottom for undequ
+  pollard# sort
+  1 swap 0              \ 1 will be at tos in loop
+  do undequ if * else swap 1- * then
+  loop nip ;            \ nip drops the dummy
+
+Some words that are needed:
+
+: drops ( a1...an n -- )
+  0 ?do drop loop ;
+
+: ** ( b e -- b^e )
+  dup 0= if 2drop 1 exit then
+  1 swap 0 do over * loop nip ;
+
+: m** ( b e -- d )
+  dup 0= if 2drop 1. exit then
+  1 swap 1. rot 0
+  do 2over m*/ loop 2nip ;
+
+: -1** ( n -- i )     \ exponentiation of (-1)
+  1 and if -1 else 1 then ;
+
+: unit* ( i j -- k )  \ multiplication of units ±1
+  xor 1+ ;
+
+: ufaculty ( u -- u! )
+  dup 2 u< if drop 1 exit then
+  dup 1- recurse * ;
+
+: umfaculty ( u -- ud )
+  dup 2 u< if drop 1. exit then
+  dup 1- recurse rot 1 m*/ ;
+
+: oddpart ( a -- i m ) \ m is odd and a=m*2^i
+  0 swap
+  begin 2/mod swap 0=
+  while 1 under+
+  repeat 2* 1+ ;
+
+The Möbius function is defined for positive integers and is zero if it contains a squared prime factor; otherwise 1 if the number of prime factors is even and else it is -1.
+
+: mobius ( n -- my )
+  dup 2 u< if drop 1 exit then
+  1 swap
+  pollard# sort
+  dup true loc{ facts sqrfree } 0 
+  do 2dup =
+     if false to sqrfree
+        facts i - drops leave 
+     then drop
+  loop sqrfree
+  if facts 1 and
+     if -1
+     else 1
+     then
+  else 0
+  then nip ;
+
+The word bigomega counts the number of prime factors of a number, and smallomega counts the number of distinct prime factors.
+
+: bigomega ( n -- b )
+  dup 2 u< if drop 0 exit then
+  pollard# dup >r drops r> ;
+
+: smallomega ( n -- s )
+  dup 2 u< if drop 0 exit then
+  1 swap
+  pollard# sort 0 swap 0
+  do undequ 0= if 1+ then nip
+  loop nip ;
+
+The Legendre symbol (a/p), where p is an odd prime and a is positive, is defined as zero if p divides a; otherwise 1 if there exist a x with a=x^2(mod p) else -1. 
+
+The Euler criterion implies that (a/p)=a^((p-1)/2)(mod p). See http://forthmath.blogspot.se/2015/11/some-arithmetical-functions.html
+
+: legendre ( a p -- i )
+  tuck dup 1- 2/ swap u**mod dup 1 u>
+  if swap - else nip then ;
+
+A generalization is the Jacobi symbol (a/n) defined for all odd numbers n and positive integers a:
+
+: jacobi ( a n -- j )
+  1 loc{ a n unit }
+  a n ugcd 1 = 0= if 0 exit then 
+  begin n 1 = a 1 = or if unit exit then
+     a n mod ?dup 0= if 0 exit then
+     oddpart to a 1 and
+     if n dup * 1- 3 rshift -1** unit unit* to unit 
+     then a n ugcd 1 = 0= if 0 exit then
+     n a to n to a
+     a 1- n 1- * 2 rshift -1** unit unit* to unit
+  again ; 
+
+And the Kronecker symbol (a/n) is a further generalization defined for all integers a and n:
+
+: kronecker ( a n -- j )
+  0 loc{ a n unit }
+  n 0= if a abs 1 = if 1 else 0 then exit then
+  n dup abs to n 0<
+  if a 0< if -1 else 1 then
+  else 1
+  then to unit
+  a dup abs to a                         \ old_a
+  n oddpart to n dup                     \ old_a i i
+  if a 1 and 0=                          \ old_a i f
+     if 2drop 0 exit                     \ old_a
+     else 1 and                          \ old_a f
+        if a 7 and 1+ 4 and              \ old_a f
+           if unit negate to unit then   \ old_a
+        then
+     then
+  else drop
+  then a n jacobi dup 0=                 \ old_a i f
+  if nip exit then                       \ old_a
+  unit unit* to unit 0<                  \ f
+  if n 1- 2/ -1** else 1 then            \ ±1
+  unit unit* ;
