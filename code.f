@@ -5,6 +5,10 @@
 : ?undef ( -- flag ) bl word find nip 0= ; 
 \ flag is true if word undefined
 
+: .s depth if >r recurse r> dup . then ;
+
+?undef 0> [if] : 0> ( n -- flag )  0 > ; [then]
+
 : ugcdl ( a b -- c )              \ Algorithm from Wikipedia
   0 loc{ a b t -- c }
   a b u< if a b to a to b then    \ a>=b as unsigned numbers
@@ -640,24 +644,6 @@ breaknumbers cells allocate throw constant breaks
 
 \ NESTED SETS WITH CARTESIAN PRODUCTS
 
-: loc{ [compile] { ; immediate
-: .s depth if >r recurse r> dup . then ;
-: ?undef ( -- flag ) bl word find nip 0= ; 
-\ flag is true if word undefined
-
-?undef 0> [if] : 0> ( n -- flag )  0 > ; [then]
-
-cell 8 * constant bits
-
-: log~ \ n -- nr             \ nr = 1+²log n
-  bits here !                \ bits is stored at the address 'here'
-  bits 0                     \ do-loop from i=0,...,bits-1
-  do 1 rshift ?dup 0=        \ shift tos at right test if zero
-     if i 1+ here !          \ if zero store i+1 at 'here'
-        leave                \ and leave the loop
-     then 
-  loop here @ ;
-
 \ Stacks_____
 
 : cs negate 2/ ;
@@ -1093,6 +1079,11 @@ cell 1- log~ constant cellshift
 : 1mod4 4 mod 1 = ;  \ n -- flag
 : 3mod4 4 mod 3 = ;  \ n -- flag
 : sqr dup sqrtf dup * = ;
+: all dup = ;
+: sqrfree dup radical = ;
+: semiprime bigomega 2 = ;
+: uniprime smallomega 1 = ;
+: biprime smallomega 2 = ;
 
 : 2sqrsum dup 0
   ?do dup i dup * - dup
