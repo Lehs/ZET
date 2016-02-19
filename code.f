@@ -6,7 +6,6 @@
 \ flag is true if word undefined
 
 : .s depth if >r recurse r> dup . then ;
-
 ?undef 0> [if] : 0> ( n -- flag )  0 > ; [then]
 
 : ugcdl ( a b -- c )              \ Algorithm from Wikipedia
@@ -473,7 +472,7 @@ cell 4 =
            if j i norm .normgp then
         then
      loop
-  loop ;
+  loop ; 
 
 : .gps 1+ 2 do i .gprime loop ;
 
@@ -563,9 +562,10 @@ variable ebuf
 [then]
 
 \ the sieve of Eratosthenes 
-
-16777215 constant plim      
-1077871 constant pi_plim    
+0xfffff constant plim
+82025 constant pi_plim
+\ 16777215 constant plim      
+\ 1077871 constant pi_plim    
 \ 100000000 constant plim \ 100000000 takes 6 times 
 \ 5761455 constant pi_plim \ longer time to load
 
@@ -637,10 +637,11 @@ breaknumbers cells allocate throw constant breaks
   >r 2dup + 2/ dup pnr@ r> u> \ i j k flag 
   if -rot nip else nip then ; 
 
-: pi ( x -- n ) >r pi_plim 1+ 0 \ x<16777215
+: fpi pi ;
+
+: pi ( x -- n ) >r pi_plim 1+ 0  \ x<16777215
   begin r@ newintpnr 2dup - 2 u< \ i j flag 
   until rdrop nip ;
-
 
 \ NESTED SETS WITH CARTESIAN PRODUCTS
 
@@ -751,7 +752,7 @@ cell 1- log~ constant cellshift
 : zswap  zover adn2 adn3 rot + move zdrop ;
 : znip  zswap zdrop ;
 : ztuck  zswap zover ;
-: zrot  zst>> zswap >>zst zswap ; \ ?!
+: zrot  zst>> zswap >>zst zswap ; 
 
 \ Output of sets_____
 
@@ -786,7 +787,7 @@ cell 1- log~ constant cellshift
 : openp \ bc -- asc
   listflag if [char] ( else [char] { then ;
 
-: list$ \ n1...nk -k ad -- ad n 
+: list$ \ ad -- ad n | s -- 
   dup to addr1 false loc{ addr2 flag }
   closep a>addr1
   foreach 
@@ -797,7 +798,7 @@ cell 1- log~ constant cellshift
   loop openp a>addr1
   addr1 1+ addr2 over - 1+ ; 
 
-1 20 lshift allocate throw constant printbuf
+1 20 lshift dup allocate throw swap cell - + constant printbuf
 
 : zet. \ -- | s -- 
   zst@ 0=
@@ -833,19 +834,65 @@ cell 1- log~ constant cellshift
 
 \ Set equal, subset and membership_____
 
-: smember \ n -- flag | s --
-  zst@ cs false loc{ m flag }
-  foreach
-  ?do zst@ 0<
-     if m zst@ cs 1+ - to m zdrop
-     else m 1- to m dup zst> =
-        if true to flag
-           m cells negate zst +! leave
-        then
-     then
-  loop drop flag ;
+: zetmerge \ -- | s s' -- s" 
+  zst yst setmove
+  yst@ zst> + 
+  yst zst setmove
+  zst! ;
 
-: vect= \ s -- flag | s' --   non empty list not including non empty sets
+: vmerge \ -- | v v'-- v" 
+  zst yst setmove
+  yst@ zst> + 1+
+  yst zst setmove
+  zst! ;
+
+: _fence \ ad -- | x -- {x} 
+  dup >r stack@ ?obj 
+  case 0 of -2 r@ >stack endof 
+       1 of r@ stack@ 1- r@ >stack endof
+       2 of r@ stack@ 2 - r@ >stack endof
+  endcase rdrop ;
+
+: xfence xst _fence ;
+: yfence yst _fence ;
+: zfence zst _fence ;
+  
+: first-sort \ -- | s -- n1...nk -2k
+  0 loc{ counter } 0 >xst 0 >yst
+  foreach
+  ?do zst@ ?obj
+     case 0 of counter 1+ to counter zst> endof
+          1 of zfence xst zst setmove zetmerge zst xst setmove endof
+          2 of zfence yst zst setmove zetmerge zst yst setmove endof
+     endcase
+  loop counter sort 2* negate >zet ;
+
+: next-element-ad \ ad1 -- ad2
+  dup @ objsize cells - ;
+
+: set-sort \ ad --
+  loc{ ad }
+  first-sort
+  xst zst setmove zetmerge
+  yst zst setmove zetmerge ;
+
+: smember \ n -- flag | s -- 
+  zst@ cs false loc{ m flag } 
+  foreach 
+  ?do zst@ 0< 
+     if m zst@ cs 1+ - to m zdrop 
+     else m 1- to m dup zst> 2dup > 
+        if false to flag 2drop 
+           m cells negate zst +! leave 
+        then = 
+        if true to flag 
+           m cells negate zst +! leave 
+        then 
+     then 
+  loop drop flag ; 
+
+: vect= \ s -- flag | s' --
+\ s non empty list not including non empty sets
   dup zst@ = 0=
   if zdrop cs 0 ?do drop loop false exit
   then true loc{ flag } zst> drop cs 0
@@ -920,29 +967,6 @@ cell 1- log~ constant cellshift
 
 \ Set algebra_____
 
-: zetmerge \ -- | s s' -- s"
-  zst yst setmove
-  yst@ zst> + 
-  yst zst setmove
-  zst! ;
-
-: vmerge \ -- | v v'-- v" 
-  zst yst setmove
-  yst@ zst> + 1+
-  yst zst setmove
-  zst! ;
-
-: _fence \ ad -- | x -- {x} 
-  dup >r stack@ ?obj 
-  case 0 of -2 r@ >stack endof 
-       1 of r@ stack@ 1- r@ >stack endof
-       2 of r@ stack@ 2 - r@ >stack endof
-  endcase rdrop ;
-
-: xfence xst _fence ;
-: yfence yst _fence ;
-: zfence zst _fence ;
-
 : reduce \ -- | s -- s' 
   0 >yst foreach
   ?do zfence zdup zst> drop
@@ -954,7 +978,7 @@ cell 1- log~ constant cellshift
   loop yst zst setmove ;
 
 : union \ -- | s s' -- s"
-  zetmerge reduce ;
+  zetmerge zst set-sort reduce ;
 
 : intersection \ -- | s s' -- s" 
   0 >xst zst yst setmove
@@ -965,7 +989,7 @@ cell 1- log~ constant cellshift
      else zdrop
      then 
   repeat zdrop yst setdrop
-  xst zst setmove reduce ;
+  xst zst setmove reduce ; 
 
 : diff \ s s' -- s" 
   0 >xst zst yst setmove 
@@ -982,13 +1006,14 @@ cell 1- log~ constant cellshift
   0 >xst zfence zst yst setmove
   begin zst@
   while zsplit yst zst setcopy union zfence
-     xst zst setmove union zst xst setmove
+     xst zst setmove zetmerge zst xst setmove
   repeat zdrop yst setdrop xst zst setmove ;
 
 : powerset \ s -- s'
   zst@ 0= if -2 >zst exit then
   zsplit zfence zst yst setmove recurse
-  zdup yst zst setmove zst> drop multincl union ;
+  zdup yst zst setmove zst> drop multincl
+  zetmerge ;
 
 : cartprod \ s s' -- s"
   zst yst setmove
@@ -999,7 +1024,8 @@ cell 1- log~ constant cellshift
      while ysplit yfence -1 yst+!
         xst zst setcopy
         yst zst setmove vmerge
-        zfence union
+        zfence
+        zetmerge
      repeat yst> drop xst setdrop 
   loop yst setdrop ;
 
@@ -1007,37 +1033,41 @@ cell 1- log~ constant cellshift
 : infence \ -- | s -- s' 
   0 >xst foreach 
   ?do zfence zfence
-     xst zst setmove union
+     xst zst setmove zetmerge
      zst xst setmove 
   loop xst zst setmove ; 
 
 \ p(A,k)=p(A\{f(A)},k)+(p(A\{f(A)},k-1)%f(A))
 : power# \ n -- | s -- s' 
-  dup zdup cardinality =
+  ?dup 0= if zdrop 0 >zst zfence exit then 
+  dup 1 = if drop infence exit then 
+  dup zdup cardinality = 
   if drop zfence exit then 
   dup 1 = if drop infence exit then 
   zsplit zfence zst xst setmove 
   dup zdup recurse 
-  zswap 1- recurse xst zst setmove
-  zst> drop multincl union ; 
+  zswap 1- recurse xst zst setmove 
+  zst> drop multincl 
+  zetmerge ; 
 
 \ {s1,...,sn} -- s1U...Usn
 : multiunion \ -- | s -- s'
   foreach 0 >zst
-  ?do union loop ;
+  ?do zetmerge
+  loop zst set-sort reduce ;
 
 \ {s1,...,sn} s' -- {s1Us',...,snUs'}
 : zetcup \ -- | s s' -- s"
   zst xst setmove 0 >yst foreach
   ?do xst zst setcopy union zfence
-     yst zst setmove union zst yst setmove
+     yst zst setmove zetmerge zst yst setmove
   loop xst setdrop yst zst setmove ;
 
 \ {s1,...,sn} s' -- {s1&s',...,sn&s'}
 : zetcap \ -- | s s' -- s"
   zst xst setmove 0 >yst foreach
   ?do xst zst setcopy intersection zfence
-     yst zst setmove union zst yst setmove
+     yst zst setmove zetmerge zst yst setmove
   loop xst setdrop yst zst setmove ;
 
 \ { s1,...,sn} {t1,...,tm} -- {siUtj}ij
@@ -1049,22 +1079,26 @@ cell 1- log~ constant cellshift
      zst xst setmove
   loop yst setdrop xst zst setmove ; 
 
-: func \ -- | s s' -- s"
-  secobjad @ 0= if zdrop -2 exit then
+: functions \ -- | s s' -- s"
+  secobjad @ 0= if zdrop -2 >zst exit then
   secobjad @ -2 = if cartprod infence exit then
   zswap zsplit zfence zst xst setmove
-  zover recurse zswap xst zst setmove zswap cartprod infence zetunion ;
+  zover recurse zswap xst zst setmove
+  zswap cartprod infence zetunion ;
 
 \ Input of sets_____
 
 0 create match ,
+true value sort?
 
 : { \ --
-  1 match +! depth >xst ;
+  1 match +! depth >xst true to sort? ;
 
 : } \ x1...xk -- 
   depth xst> - 2* negate
-  -1 match +! >zet reduce match @ if zet> then ; 
+  -1 match +! >zet sort?
+  if zst set-sort then reduce match @
+  if zet> then true to sort? ; 
 
 : q  xst stack-cl yst stack-cl zst stack-cl 0 match ! abort ;
 
@@ -1074,18 +1108,20 @@ cell 1- log~ constant cellshift
   depth xst> - 2* 1+ negate
   -1 match +! >zet match @ if zet> then ; 
 
-: pairprime dup prime over 2 + prime rot 2 - prime or and ;  \ n -- flag
-: odd 1 and ;  \ n -- flag
-: 1mod4 4 mod 1 = ;  \ n -- flag
-: 3mod4 4 mod 3 = ;  \ n -- flag
-: sqr dup sqrtf dup * = ;
+\ cond ( n -- flag )
 : all dup = ;
+: odd 1 and ; 
+: 1mod4 4 mod 1 = ; 
+: 3mod4 4 mod 3 = ; 
+: sqr dup sqrtf dup * = ;
 : sqrfree dup radical = ;
+: pairprime dup prime over 2 + prime rot 2 - prime or and ;  
+: notpairprime dup prime swap pairprime 0= and ;
 : semiprime bigomega 2 = ;
 : uniprime smallomega 1 = ;
 : biprime smallomega 2 = ;
 
-: 2sqrsum dup 0
+: 2sqrsum dup 0 
   ?do dup i dup * - dup
      0< if drop false leave then 
      sqr if true leave then
@@ -1094,4 +1130,15 @@ cell 1- log~ constant cellshift
 \ 30 70 | odd
 : | \ m n -- x1...xk 
   swap ' loc{ xt }
-  ?do i xt execute if i then loop ;
+  ?do i xt execute if i then loop false to sort? ;
+
+?undef sp0 [if]
+s0 constant sp0
+r0 constant rp0
+[then]
+
+: new-data-stack \ u -- 
+  dup aligned allocate throw + dup sp0 ! sp! ; 
+
+100000 cells new-data-stack
+100001 cells allocate throw 100000 cells + align rp0 ! quit
