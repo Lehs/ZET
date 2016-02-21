@@ -1134,6 +1134,77 @@ true value sort?
   swap ' loc{ xt }
   ?do i xt execute if i then loop false to sort? ;
 
+\ relations (A,B,R), R subset of AxB
+
+: unfence zst> drop ;
+: yzcopy1 yst zst setcopy ;
+: yzcopy2 yst setover yst zst setmove ;
+
+: domain \ (A,B,R) -- A
+  unfence zdrop zdrop ;
+
+: codomain \ (A,B,R) -- B
+  unfence zdrop znip ;
+
+: rel \ (A,B,R) -- R
+  unfence znip znip ;
+
+: image \ R -- s
+  { foreach ?do unfence zst> zst> drop loop } ;
+
+: coimage \ R -- s
+  { foreach ?do unfence zst> drop zst> loop } ;
+
+: subimage \ R s -- s'
+  zst yst setmove
+  { foreach 
+  ?do unfence zst> zst> yst zst setcopy smember 0=
+     if drop then
+  loop } yst setdrop ;
+
+: subcoimage \ R s -- s'
+  zst yst setmove
+  { foreach 
+  ?do unfence zst> zst> yst zst setcopy swap smember 0=
+     if drop then
+  loop } yst setdrop ;
+
+: func? \ -- flag | (A,B,R) --
+  unfence znip 
+  zst yst setmove true 
+  begin zst@ 
+  while zsplit zst> yst zst setcopy >zst zfence 
+     subimage cardinality 1 = 0=
+     if 0= zdrop yst setdrop exit then
+  repeat zdrop yst setdrop ;
+
+: eval \ x -- y | f --
+  >zst zfence subimage unfence zst> ;
+
+: triplet \ s1 s2 s3 -- (s1,s2,s3)
+  zrot zst@ 2 - zrot zst@ 2 - zrot zst@ 2 - + + 1- >zst ;
+
+: composition \ (A,B,R) (B,C,S) -- (A,C,SR) 
+  0 >xst
+  unfence zrot zdrop zrot unfence       \ C S A B R 
+  zst yst setmove zdrop zswap           \ C A S
+  zst yst setmove                       \ R S in yst 
+  zswap zover zover cartprod            \ A C A×C 
+  begin zst@ 
+  while zsplit infence
+     yzcopy1 zover zsplit znip subcoimage
+     zst xst setmove
+     yzcopy2 zover zsplit zdrop unfence subimage 
+     xst zst setmove intersection zst@ zdrop 
+     if unfence unfence zst> unfence >zst -5 >zst zfence
+        xst zst setmove zetmerge zst xst setmove
+     else zdrop
+     then 
+  repeat zdrop yst setdrop yst setdrop
+  xst zst setmove triplet ;
+
+\ increasing the Forth stacks
+
 ?undef sp0 [if]
 s0 constant sp0
 r0 constant rp0
