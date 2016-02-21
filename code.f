@@ -730,9 +730,11 @@ cell 1- log~ constant cellshift
   rot cell+ dup r> +! cmove ;
 
 : setover \ ad --
-  dup >r @ @ cs cells 
-  r> @ swap - cell-               \ ad
-  dup @ cs cells ;                \ n'
+  dup >r @ @ cs cells cell+       \ nr of bytes 1'st set 
+  r@ @ swap -                     \ ad to 2'nd set
+  dup @ cs cells cell+ dup >r -   \ ad to 3'rd set
+  cell+ r> r@ @ cell+             \ ad to move to
+  swap dup r> +! cmove ;
 
 : setcopy loc{ ad1 ad2 -- }
   ad1 @ @ cs cells             \ n'
