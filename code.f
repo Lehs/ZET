@@ -1052,6 +1052,10 @@ cell 1- log~ constant cellshift
   zst> drop multincl 
   zetmerge ; 
 
+\ http://rosettacode.org/wiki/Evaluate_binomial_coefficients#Forth
+: choose \ n k -- nCk 
+  1 swap 0 ?do over i - i 1+ */ loop nip ;
+
 \ {s1,...,sn} -- s1U...Usn
 : multiunion \ -- | s -- s'
   foreach 0 >zst
@@ -1180,6 +1184,9 @@ true value sort?
 
 : eval \ x -- y | f --
   >zst zfence subimage unfence zst> ;
+
+: pair \ s1 s2 -- (s1,s2)
+  zswap zst@ 2 - zswap zst@ 2 - + 1- >zst ;
 
 : triplet \ s1 s2 s3 -- (s1,s2,s3)
   zrot zst@ 2 - zrot zst@ 2 - zrot zst@ 2 - + + 1- >zst ;
