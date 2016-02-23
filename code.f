@@ -1279,6 +1279,14 @@ true value sort?
      zst> 1- >zst                  \ mark it as ordered list
   then ; 
 
+: dag? \ -- f | (V,E) -- 
+  toposort zst@ 0= 0= zdrop ;
+
+: rand-acyclic-digraph \ m n -- | -- (V,E)
+  begin 2dup rand-noloop-digraph zdup dag? 0=
+  while zdrop
+  repeat 2drop ;
+
 \ increasing the Forth stacks
 
 ?undef sp0 [if]
