@@ -842,6 +842,9 @@ cell 1- log~ constant cellshift
   yst zst setmove
   zst! ;
 
+: ymerge yst xst setmove xst@ yst> + xst yst setmove yst! ;
+: zmerge zetmerge ;
+
 : vmerge \ -- | v v'-- v" 
   zst yst setmove
   yst@ zst> + 1+
@@ -1210,6 +1213,72 @@ true value sort?
   repeat zdrop yst setdrop yst setdrop
   xst zst setmove triplet ;
 
+: path? \ x y -- flag | E --
+  swap >zst zfence 
+  begin zover zover ztuck subimage      \ E s s s'
+     union zdup dup smember             \ E s s" f
+     if drop zdrop zdrop zdrop true exit then
+     zswap zover zet=                   \ E s" s=s"
+     if drop zdrop zdrop false exit then
+  again ;
+
+: ipair \ m n -- | -- (m,n)
+  2>r ( 2r> ) ;
+
+: loopset \ V -- s
+  { foreach ?do ( zst> dup ) loop } ;
+
+: rand-pair \ |V| -- | -- s
+  dup random 1+ swap random 1+ ipair ; 
+
+: rand-digraph \ |V| |E| -- | -- (V,E)
+  { over 1+ 1 ?do i loop } 
+  0 >zst 
+  begin over rand-pair zfence union zdup cardinality over = 
+  until 2drop 
+  pair ; 
+
+: rand-noloop-digraph \ |V| |E| -- | -- (V,E)
+  { over 1+ 1 ?do i loop } 
+  0 >zst 
+  begin over rand-pair zfence union 
+     zover loopset diff 
+     zdup cardinality over = 
+  until 2drop pair ; 
+
+: sourceset \ (V,E) -- s 
+  unfence image diff ; 
+
+: sinkset \ (V,E) -- s 
+  unfence coimage diff ; 
+
+: xzmerge \ s -- 
+  xst zst setmove zswap zetmerge 
+  zst xst setmove ; 
+
+: toposort \ (V,E) -- s
+  0 >xst                           \ empty set in x
+  zdup sourceset zst yst setmove   \ source nodes in y
+  unfence znip                     \ drop V keep E
+  begin yst@                       \ while source nodes left
+  while ysplit yst> dup            \ remove node m
+     zdup >zst zfence zdup xzmerge \ add m to the set in x
+     subimage                      \ set of all n: m→n
+     begin zst@                    \ while that set non empty
+     while zsplit zst> zswap       \ remove node n, E tos
+        2dup ipair zfence diff     \ E:=E\{(m,n)}
+        dup zdup >zst zfence       \ build set of all nodes..
+        subcoimage zst@ 0=         \ ..pointing at n
+        if >yst yfence ymerge      \ add n to y-set if empty
+        else drop                  \ else drop n
+        then zdrop zswap           \ drop set, swap E back
+     repeat zdrop drop             \ drop empty set and node m
+  repeat yst> drop zst@ zdrop      \ drop empty set and E
+  if xst setdrop 0 >zst            \ if |E|>0 flag with empty set
+  else xst zst setmove             \ else move the x-set to zst
+     zst> 1- >zst                  \ mark it as ordered list
+  then ; 
+
 \ increasing the Forth stacks
 
 ?undef sp0 [if]
@@ -1221,4 +1290,4 @@ r0 constant rp0
   dup aligned allocate throw + dup sp0 ! sp! ; 
 
 100000 cells new-data-stack
-100001 cells allocate throw 100000 cells + align rp0 ! quit
+100001 cells allocate throw 100000 cells + align rp0 ! q
