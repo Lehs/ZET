@@ -6,6 +6,7 @@
 \ flag is true if word undefined
 
 : .s depth if >r recurse r> dup . then ;
+
 ?undef 0> [if] : 0> ( n -- flag )  0 > ; [then]
 
 : ugcdl ( a b -- c )              \ Algorithm from Wikipedia
@@ -662,7 +663,7 @@ cell negate constant -cell
 : stack! ( n ad -- )  @ ! ;
 : stack+! ( n ad -- )  @ +! ;
 
-1 16 lshift cells allocate throw dup constant xst dup ! 
+1 22 lshift cells allocate throw dup constant xst dup ! 
 
 : >xst ( n -- )  xst >stack ;
 : xst> ( -- n )  xst stack> ;
@@ -674,7 +675,7 @@ cell negate constant -cell
 : >>xst ( xn ... x1 bc -- )  >r r@ cs 0 ?do >xst loop r> >xst ;
 : xst>> ( -- x1 ... xn bc )  xst@ >r xst> cs 0 ?do xst> loop r> ;
 
-1 20 lshift cells allocate throw dup constant yst dup ! 
+1 22 lshift cells allocate throw dup constant yst dup ! 
 
 : >yst ( n -- )  yst >stack ;
 : yst> ( -- n )  yst stack> ;
@@ -692,7 +693,7 @@ cell 1- log~ constant cellshift
 : stack-cl ( ad -- )  dup ! ;
 : stack-empty ( ad -- flag )  dup @ = ;
 
-1 21 lshift cells allocate throw dup constant zst dup ! 
+1 22 lshift cells allocate throw dup constant zst dup ! 
 
 : >zst ( n -- )  zst >stack ;
 : zst> ( -- n )  zst stack> ;
@@ -708,11 +709,11 @@ cell 1- log~ constant cellshift
 : showy yst stack-depth if yst> >r recurse r> dup . >yst then ;
 : showz zst stack-depth if zst> >r recurse r> dup . >zst then ;
 
-: >zet ( s -- | -- s)  >>yst yst> dup >r cs 0 ?do yst> >zst loop r> >zst ;
-: zet> ( -- s | s -- )  zst> dup >r cs 0 ?do zst> >xst loop r> >xst xst>> ;
+: >zet ( s -- | -- s)
+  >>yst yst> dup >xst cs 0 ?do yst> >zst loop xst> >zst ; 
 
-: (: [compile] ( ; immediate
-: :) [compile] ) ; immediate
+: zet> ( -- s | s -- )
+  zst> dup >yst cs 0 ?do zst> >xst loop yst> >xst xst>> ; 
 
 \ Set manipulations_____
 
@@ -745,8 +746,8 @@ cell 1- log~ constant cellshift
   swap dup rot setcopy setdrop ;
 
 : adn1 zst@ cs cells zst @ over - swap cell+ ;
-: adn2 adn1 drop cell- dup @ cs cells tuck - swap cell+ ;
-: adn3 adn2 drop cell- dup @ cs cells tuck - swap cell+ ;
+: adn2 adn1 drop cell - dup @ cs cells tuck - swap cell+ ;
+: adn3 adn2 drop cell - dup @ cs cells tuck - swap cell+ ;
 
 : zdup  zst setdup ;
 : zdrop  zst setdrop ;
@@ -821,7 +822,7 @@ cell 1- log~ constant cellshift
   then ;
 
 : _split \ ad --   ad=yst,zst 
-  dup >r @ cell- @ 0< 0=
+  dup >r @ cell - @ 0< 0=
   if r@ stack> 2 + r@ stack> swap r@ >stack r> >stack exit then
   r@ stack>
   r@ xst setmove
@@ -841,7 +842,7 @@ cell 1- log~ constant cellshift
   yst@ zst> + 
   yst zst setmove
   zst! ;
-
+  
 : ymerge yst xst setmove xst@ yst> + xst yst setmove yst! ;
 : zmerge zetmerge ;
 
@@ -1055,9 +1056,11 @@ cell 1- log~ constant cellshift
   zst> drop multincl 
   zetmerge ; 
 
-\ http://rosettacode.org/wiki/Evaluate_binomial_coefficients#Forth
+\ from rosetta code
 : choose \ n k -- nCk 
-  1 swap 0 ?do over i - i 1+ */ loop nip ;
+  1 swap 0
+  ?do over i - i 1+ */
+  loop nip ;
 
 \ {s1,...,sn} -- s1U...Usn
 : multiunion \ -- | s -- s'
@@ -1114,7 +1117,7 @@ true value sort?
 : (  { ;
 
 : ) \ x1...xk --
-  depth xst> - 2* 1+ negate
+  depth xst> - 2* 1+ negate 
   -1 match +! >zet match @ if zet> then ; 
 
 \ cond ( n -- flag )
@@ -1253,9 +1256,15 @@ true value sort?
   unfence coimage diff ; 
 
 : xzmerge \ s -- 
-  xst zst setmove zswap zetmerge 
+  xst zst setmove
+  zswap zetmerge 
   zst xst setmove ; 
-
+  
+: xzmergered
+  xst zst setmove
+  zswap zetmerge reduce
+  zst xst setmove ; 
+  
 : toposort \ (V,E) -- s
   0 >xst                           \ empty set in x
   zdup sourceset zst yst setmove   \ source nodes in y
@@ -1283,11 +1292,114 @@ true value sort?
   toposort zst@ 0= 0= zdrop ;
 
 : rand-acyclic-digraph \ m n -- | -- (V,E)
-  begin 2dup rand-noloop-digraph zdup dag? 0=
+  begin 2dup rand-noloop-digraph zdup dag? 0= 0=
   while zdrop
   repeat 2drop ;
 
-\ increasing the Forth stacks
+\ Permutation groups
+
+\ The number of permutations in a set
+: ord \ -- n | s -- s
+  zst> zst> 2dup >zst >zst
+  cs 1+ swap cs swap / ;
+
+\ The number of elements to be permuted in v
+: numb \ -- n | v --
+  zst@ cs zdrop ;
+
+\ j=v(i)
+: pmaps \ i -- j | v --
+  zdrop cells zst @ + @ ;
+
+\ composition of permutations as functions
+: permcomp \ v1 v2 -- v1v2
+  ( zst@ cs 1+ 1
+  do zover zover i pmaps pmaps
+  loop ) znip znip ; 
+
+\ generation of cyclic permutation group
+: pgen \ v -- s
+  zst yst setcopy -1 1
+  do zdup yzcopy1 permcomp zdup yzcopy1 vector=
+     if numb 1+ i * 2* negate >zst leave then
+  loop yst setdrop ; 
+
+\ right coset
+: prcoset \ s v -- s' 
+  0 >xst
+  zst yst setmove
+  foreach
+  ?do yzcopy1 permcomp zfence xzmerge
+  loop yst setdrop xst zst setmove ;
+
+\ left coset
+: plcoset \ v s -- s'
+  0 >xst
+  zswap zst yst setmove
+  foreach
+  ?do yzcopy1 zswap permcomp zfence xzmerge
+  loop yst setdrop xst zst setmove ;
+
+\ componentwise composition of permutation sets
+: permset* \ -- | s1 s2 -- s3
+  0 >xst 
+  zst yst setmove 
+  foreach 
+  ?do yzcopy1 plcoset 
+  xzmergered
+  loop yst setdrop 
+  xst zst setmove ;
+
+: permgroup? \ -- flag | s -- 
+  zdup zdup permset* zet= ; 
+
+\ Generation of standard permutations
+: pidentity \ n -- | -- v
+  >r ( r> 1+ 1 ?do i loop ) ;
+  
+: pcirc \ n -- | -- v
+  >r ( r> dup 1 ?do i loop )  ;
+
+: proll \ n -- | -- v
+  >r ( r@ 1- dup 1 do i loop r> ) ; 
+
+\ The number of element to be permuted in permutations in s
+: perm# \ -- n | s -- s
+  zst> zst> tuck >zst >zst cs ; 
+
+\ Calculate the inverse permutation
+: pinv \ v -- v'
+  zdup adn2 drop adn1 -rot loc{ a2 a1 } cell/ 1
+  do i dup 1- cells a2 + @ 1- cells a1 + ! loop znip ;
+
+\ add the inverses to all permutations in s
+: adinv \ s -- s'
+  0 >xst zdup xzmerge foreach 
+  do pinv zfence xzmerge 
+  loop xst zst setmove reduce ;
+
+\ generstes the group s' from the generators in s
+: generate \ s -- s'
+  zst yst setcopy 0 >xst foreach
+  ?do pgen xzmerge 
+  loop xst zst setmove reduce 1
+  begin yzcopy1 zswap permset* 
+     yzcopy1 permset* ord tuck =
+  until yst setdrop drop ;
+
+\ generate set of groups s' from set of generators s
+: multigen \ s -- s'
+  0 >xst foreach 
+  ?do generate zfence xzmerge
+  loop xst zst setmove reduce ;
+
+\ Set of all subgroups to s
+: psubgroups \ s -- s'
+  perm# pidentity zfence zfence
+  zst yst setmove foreach
+  do yst zst setmove zdup zrot multincl 
+     multigen union zst yst setmove
+  loop yst zst setmove ;
 
 ?undef sp0 [if]
 s0 constant sp0
