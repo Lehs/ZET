@@ -54,7 +54,7 @@ cell 8 * constant bits
      u*mod to b         \ new squared number to b
   loop ;                \ result of the repeated multiplication
 
-: invmod dup ( a m -- a' ) \ a m must be coprime
+: invmod ( a m -- a' ) \ a m must be coprime
   dup 1 0 loc{ a m v c b }
   begin a
   while v a / >r
@@ -1258,7 +1258,8 @@ true value sort?
   
 : xzmergered
   xst zst setmove
-  zswap zetmerge reduce
+  zswap zetmerge 
+  set-sort reduce
   zst xst setmove ; 
   
 : toposort \ (V,E) -- s
