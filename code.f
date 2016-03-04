@@ -1398,6 +1398,47 @@ true value sort?
      multigen union zst yst setmove
   loop yst zst setmove ;
 
+: psub? \ -- flag | s s' --
+  zover zswap subset 0= 
+  if zdrop false exit 
+  then permgroup? ;
+  
+: pnsub? \ -- flag | s s' --
+  zover zover psub? 0= 
+  if zdrop zdrop false exit then
+  zswap zst yst setmove
+  begin zst@
+  while zsplit yzcopy1 zover prcoset 
+     zswap yzcopy1 plcoset zet= 0=
+     if zdrop yst setdrop false exit then
+  repeat zdrop yst setdrop true ;
+
+: pnsubgroups \ s -- s'
+  zst yst setcopy
+  psubgroups
+  0 >xst
+  begin zst@
+  while zsplit zdup yzcopy1 pnsub?
+     if zfence xzmerge else zdrop then
+  repeat zdrop yst setdrop xst zst setmove ;
+  
+: setint+ \ n -- | s -- s'
+  0 >xst foreach
+  ?do zst> over + >zst zfence xzmerge
+  loop drop xst zst setmove ;
+
+: set+ \ s s' -- s"
+  0 >xst 
+  zst yst setmove
+  foreach
+  ?do zst> yzcopy1 setint+ xzmergered
+  loop yst setdrop 
+  xst zst setmove ;
+
+1 value num
+: coprime \ n -- flag
+  num ugcd 1 = ;
+
 ?undef sp0 [if]
 s0 constant sp0
 r0 constant rp0
