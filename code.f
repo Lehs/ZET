@@ -863,7 +863,7 @@ cell 1- log~ constant cellshift
 : yfence yst _fence ;
 : zfence zst _fence ;
   
-: first-sort \ -- | s -- n1...nk -2k
+: set-sort \ -- | s -- n1...nk -2k
   0 loc{ counter } 0 >xst 0 >yst
   foreach
   ?do zst@ ?obj
@@ -871,16 +871,12 @@ cell 1- log~ constant cellshift
           1 of zfence xst zst setmove zetmerge zst xst setmove endof
           2 of zfence yst zst setmove zetmerge zst yst setmove endof
      endcase
-  loop counter sort 2* negate >zet ;
+  loop counter sort 2* negate >zet
+  xst zst setmove zetmerge
+  yst zst setmove zetmerge ;
 
 : next-element-ad \ ad1 -- ad2
   dup @ objsize cells - ;
-
-: set-sort \ ad --
-  loc{ ad }
-  first-sort
-  xst zst setmove zetmerge
-  yst zst setmove zetmerge ;
 
 : smember \ n -- flag | s -- 
   zst@ cs false loc{ m flag } 
@@ -984,7 +980,7 @@ cell 1- log~ constant cellshift
   loop yst zst setmove ;
 
 : union \ -- | s s' -- s"
-  zetmerge zst set-sort reduce ;
+  zetmerge set-sort reduce ;
 
 : intersection \ -- | s s' -- s" 
   0 >xst zst yst setmove
@@ -1066,7 +1062,7 @@ cell 1- log~ constant cellshift
 : multiunion \ -- | s -- s'
   foreach 0 >zst
   ?do zetmerge
-  loop zst set-sort reduce ;
+  loop set-sort reduce ;
 
 \ {s1,...,sn} s' -- {s1Us',...,snUs'}
 : zetcup \ -- | s s' -- s"
@@ -1109,7 +1105,7 @@ true value sort?
 : } \ x1...xk -- 
   depth xst> - 2* negate
   -1 match +! >zet sort?
-  if zst set-sort then reduce match @
+  if set-sort then reduce match @
   if zet> then true to sort? ; 
 
 : q  xst stack-cl yst stack-cl zst stack-cl 0 match ! abort ;
@@ -1411,3 +1407,4 @@ r0 constant rp0
 
 100000 cells new-data-stack
 100001 cells allocate throw 100000 cells + align rp0 ! q
+
