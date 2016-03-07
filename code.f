@@ -1365,6 +1365,11 @@ true value sort?
   zst> zst> tuck >zst >zst cs ; 
 
 \ Calculate the inverse permutation
+?undef cell/ [if]
+cell 4 = [if] : cell/ 2 rshift ; [then]
+cell 8 = [if] : cell/ 3 rshift ; [then]
+[then]
+
 : pinv \ v -- v'
   zdup adn2 drop adn1 -rot loc{ a2 a1 } cell/ 1
   do i dup 1- cells a2 + @ 1- cells a1 + ! loop znip ;
