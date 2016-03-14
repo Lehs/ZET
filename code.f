@@ -1269,7 +1269,7 @@ true value sort?
   begin yst@                       \ while source nodes left
   while ysplit yst> dup            \ remove node m
      zdup >zst zfence zdup xzmerge \ add m to the set in x
-     subimage                      \ set of all n: m→n
+     subimage                      \ set of all n: m?n
      begin zst@                    \ while that set non empty
      while zsplit zst> zswap       \ remove node n, E tos
         2dup ipair zfence diff     \ E:=E\{(m,n)}
@@ -1395,13 +1395,37 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
   ?do generate zfence xzmerge
   loop xst zst setmove reduce ;
 
-\ Set of all subgroups to s
+\ generates the group s' from the generators in s, if |s'|=<n
+: limgenerate \ n -- flag | s -- s'
+  loc{ n }
+  0 >xst
+  zst yst setcopy
+  foreach
+  ?do pgen xzmerge 
+  loop xst zst setmove reduce
+  1
+  begin ord n >
+     if yst setdrop drop false exit then 
+     yzcopy1 zswap permset* 
+     ord n >
+     if yst setdrop drop false exit then 
+     yzcopy1 permset* ord tuck =
+  until yst setdrop drop true ;
+
+\ generate set of groups s' from set of generators s
+: limmultigen \ n -- | s -- s'
+  0 >xst foreach 
+  ?do dup limgenerate if zfence xzmerge else zdrop then
+  loop xst zst setmove reduce drop ;
+
+\ Set of all subgroups of s
 : psubgroups \ s -- s'
-  perm# pidentity zfence zfence
-  zst yst setmove foreach
-  do yst zst setmove zdup zrot multincl 
-     multigen union zst yst setmove
-  loop yst zst setmove ;
+  ord dup >r pollard# over r> swap / loc{ n } drops
+  perm# pidentity zfence zfence zover zfence zmerge
+  zst xst setmove foreach
+  do xst zst setcopy zswap multincl 
+     n limmultigen xzmergered
+  loop xst zst setmove ;
 
 : psub? \ -- flag | s s' --
   zover zswap subset 0= 
@@ -1443,6 +1467,99 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
 1 value num
 : coprime \ n -- flag
   num ugcd 1 = ;
+
+\ Some finite groups
+
+\ cyclic group of permutations of 1...n
+: cyc \ n -- | -- s
+  pcirc pgen ;
+
+\ symetric group of permutations of 1...n, n<6
+: sym \ n -- | -- s 
+  dup 2 >
+  if dup pcirc zfence proll zfence zmerge generate
+  else 2 = if ( 2 1 ) pgen else ( 1 ) pgen then
+  then ;
+
+\ dihedral group of permutations of 1...n
+: dih \ n -- | -- s
+  dup >r pcirc zfence
+  ( 1 r> ?do i -1 +loop ) zfence 
+  zetmerge generate ; 
+
+\ alternating group of permutations of 1...n, n<6
+: alt \ n -- | -- s   n>2
+  dup 3 = if drop ( 2 3 1 ) pgen exit then
+  dup 1 and
+  if >r 
+     { r@ pcirc 
+     ( r@ 2 - 1 do i loop r@ 1- r@ r> 2 - )
+     } generate
+  else >r 
+     { ( r@ 2 do i loop 1 r@ )
+     ( r@ 2 - 1 do i loop r@ 1- r@ r> 2 - )
+     } generate
+  then ;
+
+\ quaternion group group of permutations of 1...8
+: q8 \ -- s
+  { ( 2 4 6 7 3 8 1 5 ) ( 3 5 4 8 7 2 6 1 ) } generate ;
+
+\ The product of two permutation groups given as a permutation group
+
+: rext \ n -- | v -- v'
+  >r ( r> zst@ cs do i 1+ loop )
+  1 zst+! zswap 1 zst+! zswap zmerge -1 zst+! ;
+
+: lext \ n -- | v -- v'
+  dup >r ( r> zst@ cs - 1+ 1 do i loop ) 1 zst+!
+  zswap zst@ tuck cs - loc{ x y }
+  1 zst+! foreach
+  do zst> y + loop x 1+ >>zst
+  zmerge -1 zst+! ;
+
+: multirext \ n -- | s -- s'
+  0 >xst foreach
+  do dup rext zfence xzmerge
+  loop drop xst zst setmove ;
+
+: multilext \ n -- | s -- s'
+  0 >xst foreach
+  do dup lext zfence xzmerge
+  loop drop xst zst setmove ;
+
+\ the product of two groups s and s'
+: gprod \ s s' -- s"
+  ord zswap ord +
+  dup multirext zswap
+  multilext union generate ;
+  
+\ Pseudo isomorphism test
+
+\ the set of cyclic subgroups
+: pcsubs \ s -- s'
+  0 >xst
+  foreach
+  do pgen zfence xzmerge
+  loop xst zst setmove reduce ;
+  
+: card<> \ -- flag | s s' -- s s'
+  zover cardinality zdup cardinality = 0= ;
+  
+: vect-sort \ v -- v'
+  set-sort zst> 1- > zst ;
+
+\ compute vector of orders of all cyclic subgroups in s
+: pscan \ s -- v 
+  0 foreach do cardinality swap 1+ loop 
+  sort 2* 1+ negate >zet ;
+
+: pseudoiso \ -- flag | s s' --
+  card<>
+  if zdrop zdrop false exit then 
+  pcsubs zswap pcsubs card<>
+  if zdrop zdrop false exit then
+  pscan zswap pscan vector= ;
 
 ?undef sp0 [if]
 s0 constant sp0
