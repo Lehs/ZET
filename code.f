@@ -1343,7 +1343,7 @@ true value sort?
   zst yst setmove 
   foreach 
   ?do yzcopy1 plcoset 
-  xzmergered
+     xzmergered
   loop yst setdrop 
   xst zst setmove ;
 
@@ -1380,7 +1380,7 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
   do pinv zfence xzmerge 
   loop xst zst setmove reduce ;
 
-\ generstes the group s' from the generators in s
+\ generates the group s' from the generators in s
 : generate \ s -- s'
   zst yst setcopy 0 >xst foreach
   ?do pgen xzmerge 
@@ -1470,22 +1470,30 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
 
 \ Some finite groups
 
+\ generates the group s' with known order from the generators in s
+: #generate \ n -- | s -- s'
+  zst yst setcopy 0 >xst foreach
+  do pgen xzmerge loop xst zst setmove reduce
+  begin yzcopy1 zswap permset* 
+     yzcopy1 permset* ord over < 0=
+  until yst setdrop drop ;
+
 \ cyclic group of permutations of 1...n
 : cyc \ n -- | -- s
   pcirc pgen ;
 
 \ symetric group of permutations of 1...n, n<6
 : sym \ n -- | -- s 
-  dup 2 >
-  if dup pcirc zfence proll zfence zmerge generate
+  loc{ n } n 2 >
+  if n pcirc zfence n proll zfence zmerge n ufaculty #generate
   else 2 = if ( 2 1 ) pgen else ( 1 ) pgen then
   then ;
 
 \ dihedral group of permutations of 1...n
 : dih \ n -- | -- s
   dup >r pcirc zfence
-  ( 1 r> ?do i -1 +loop ) zfence 
-  zetmerge generate ; 
+  ( 1 r@ ?do i -1 +loop ) zfence 
+  zetmerge r> 2* #generate ; 
 
 \ alternating group of permutations of 1...n, n<6
 : alt \ n -- | -- s   n>2
@@ -1493,17 +1501,17 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
   dup 1 and
   if >r 
      { r@ pcirc 
-     ( r@ 2 - 1 do i loop r@ 1- r@ r> 2 - )
-     } generate
+     ( r@ 2 - 1 do i loop r@ 1- r@ r@ 2 - )
+     } r> ufaculty 2/ #generate
   else >r 
      { ( r@ 2 do i loop 1 r@ )
-     ( r@ 2 - 1 do i loop r@ 1- r@ r> 2 - )
-     } generate
+     ( r@ 2 - 1 do i loop r@ 1- r@ r@ 2 - )
+     } r> ufaculty 2/ #generate
   then ;
 
 \ quaternion group group of permutations of 1...8
 : q8 \ -- s
-  { ( 2 4 6 7 3 8 1 5 ) ( 3 5 4 8 7 2 6 1 ) } generate ;
+  { ( 2 4 6 7 3 8 1 5 ) ( 3 5 4 8 7 2 6 1 ) } 8 #generate ;
 
 \ The product of two permutation groups given as a permutation group
 
