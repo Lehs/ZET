@@ -1188,7 +1188,7 @@ true value sort?
   >zst zfence subimage unfence zst> ;
 
 : pair \ s1 s2 -- (s1,s2)
-  zswap zst@ 2 - zswap zst@ 2 - + 1- >zst ;
+  zswap zst@/ 2 - zswap zst@ 2 - + 1- >zst ;
 
 : triplet \ s1 s2 s3 -- (s1,s2,s3)
   zrot zst@ 2 - zrot zst@ 2 - zrot zst@ 2 - + + 1- >zst ;
@@ -1538,9 +1538,9 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
 
 \ the product of two groups s and s'
 : gprod \ s s' -- s"
-  ord zswap ord +
+  ord zswap ord 2dup +
   dup multirext zswap
-  multilext union generate ;
+  multilext union * #generate ;
   
 \ Pseudo isomorphism test
 
