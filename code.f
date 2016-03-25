@@ -1289,7 +1289,7 @@ true value sort?
   toposort zst@ 0= 0= zdrop ;
 
 : rand-acyclic-digraph \ m n -- | -- (V,E)
-  begin 2dup rand-noloop-digraph zdup dag? 0= 0=
+  begin 2dup rand-noloop-digraph zdup dag? 0=
   while zdrop
   repeat 2drop ;
 
