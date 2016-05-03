@@ -1569,6 +1569,80 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
   if zdrop zdrop false exit then
   pscan zswap pscan vector= ;
 
+\ Fast generation of groups
+
+: reverse-string \ ad n --
+  2dup + 1- loc{ ad1 n ad2 } n 2/ 0
+  ?do ad1 i + c@ ad2 i - c@ 
+     ad1 i + c! ad2 i - c!
+  loop ; 
+
+: lex-perm1 \ ad n -- a1
+  0 loc{ a1 } 2 - over + 
+  do i c@ i 1+ c@ <
+     if i to a1 leave then -1
+  +loop a1 ;
+
+: lex-perm2 \ ad n a1 -- a2
+  0 loc{ a1 a2 } 1- over +
+  do a1 c@ i c@ <
+     if i to a2 leave then -1
+  +loop a2 ;
+
+: lex-perm3 \ a1 a2 --
+  over c@ over c@
+  swap rot c!
+  swap c! ;
+
+: lex-perm4 \ ad n a1 --   reverse from a1+1 to ad+n-1 
+  1+ -rot            \ a1+1 ad n
+  + over -           \ a1+1 ad+n-(a1+1) 
+  reverse-string ; 
+
+: nextp \ ad n -- 
+  2dup 2dup          \ ad n ad n ad n
+  lex-perm1 dup 0=
+  if 2drop 2drop drop exit 
+  then dup >r        \ ad n ad n a1
+  lex-perm2 r>       \ ad n a2 a1
+  tuck swap          \ ad n a1 a1 a2
+  lex-perm3          \ ad n a1
+  lex-perm4 ;
+
+: n>str \ n -- ad n
+  dup 0 do i 49 + pad i + c! loop pad swap ;
+
+: str>vect \ ad n -- | -- s
+  loc{ ad n } n dup 0
+  do ad i + c@ 15 and >zst loop 2* 1+ negate >zst ;
+
+: sym \ n -- | -- s
+  n>str loc{ ad n }
+  n dup ufaculty dup 0
+  do ad n str>vect 
+     ad n nextp
+  loop swap 1+ * 2* negate >zst ;
+
+: perm> \ m -- n | s --
+  loc{ m } 0
+  foreach do zst> m > + loop negate ;
+  
+: #perm \ -- n | s -- 
+  0
+  begin zst@ -3 <
+  while zsplit zst> zdup perm> +
+  repeat zdrop ;
+
+: oddperm \ -- flag | s --
+  #perm 1 and ; 
+
+: alt \ n -- | -- s
+  n>str loc{ ad n }
+  n dup ufaculty dup 0
+  do ad n str>vect zdup oddperm
+     if zdrop then ad n nextp
+  loop swap 1+ * negate >zst ;
+
 ?undef sp0 [if]
 s0 constant sp0
 r0 constant rp0
@@ -1579,4 +1653,3 @@ r0 constant rp0
 
 100000 cells new-data-stack
 100001 cells allocate throw 100000 cells + align rp0 ! q
-
