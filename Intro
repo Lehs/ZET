@@ -1,4 +1,4 @@
-Nested sets with Cartesian products and a lot of arithmetical functions.
+Nested sets with Cartesian products and some arithmetical functions.
 
 { 0 1 2 } { 0 1 } cartprod zdup cr zet.
 {(2,1),(2,0),(1,1),(1,0),(0,1),(0,0)} ok
