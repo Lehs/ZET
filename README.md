@@ -1,5 +1,5 @@
 # ZET
-NESTED SETS WITH CARTESIAN PRODUCTS AND A LOT OF ARITHMETICAL FUNCTIONS
+NESTED SETS WITH CARTESIAN PRODUCTS AND SOME ARITHMETICAL FUNCTIONS
 
 The sets are implemented in three stacks located at 'xst', 'yst' and 'zst' as bundles on the stacks:
 
