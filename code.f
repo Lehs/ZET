@@ -1481,20 +1481,20 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
 \ cyclic group of permutations of 1...n
 : cyc \ n -- | -- s
   pcirc pgen ;
-
+false [if]
 \ symetric group of permutations of 1...n, n<6
 : sym \ n -- | -- s 
   loc{ n } n 2 >
   if n pcirc zfence n proll zfence zmerge n ufaculty #generate
   else 2 = if ( 2 1 ) pgen else ( 1 ) pgen then
   then ;
-
+[then]
 \ dihedral group of permutations of 1...n
 : dih \ n -- | -- s
   dup >r pcirc zfence
   ( 1 r@ ?do i -1 +loop ) zfence 
   zetmerge r> 2* #generate ; 
-
+false [if]
 \ alternating group of permutations of 1...n, n<6
 : alt \ n -- | -- s   n>2
   dup 3 = if drop ( 2 3 1 ) pgen exit then
@@ -1508,7 +1508,7 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
      ( r@ 2 - 1 do i loop r@ 1- r@ r@ 2 - )
      } r> ufaculty 2/ #generate
   then ;
-
+[then]
 \ quaternion group group of permutations of 1...8
 : q8 \ -- s
   { ( 2 4 6 7 3 8 1 5 ) ( 3 5 4 8 7 2 6 1 ) } 8 #generate ;
