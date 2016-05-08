@@ -1555,7 +1555,7 @@ false [if]
   zover cardinality zdup cardinality = 0= ;
   
 : vect-sort \ v -- v'
-  set-sort zst> 1- > zst ;
+  set-sort zst> 1- >zst ;
 
 \ compute vector of orders of all cyclic subgroups in s
 : pscan \ s -- v 
