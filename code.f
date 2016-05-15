@@ -1465,7 +1465,7 @@ cell 8 = [if] : cell/ 3 rshift ; [then]
   xst zst setmove ;
 
 1 value num
-: coprime \ n -- flag
+: numcoprime \ n -- flag
   num ugcd 1 = ;
 
 \ Some finite groups
@@ -1758,6 +1758,65 @@ false [if]
      zst> cyc!check if zst> drop zdrop false exit then 
      zst> cyc!check if zdrop false exit then
   repeat zdrop true ;
+
+\ Testing conjectures
+
+: intcond \ low hi xt -- | -- s   "intervall condition"
+  loc{ xt } 
+  swap 0 -rot
+  do i xt execute 
+     if i >zst 1+ then
+  loop 2* negate >zst ;
+
+: setcond \ xt -- | s -- s'       "set condition"
+  loc{ xt } 0
+  foreach
+  do zst> dup xt execute
+     if >xst 1+ else drop then
+  loop dup 0
+  do xst> >zst 
+  loop 2* negate >zst ;
+
+: intimage \ low hi xt -- | -- s  "intervall image"
+  loc{ xt } 
+  swap 2dup
+  do i xt execute >zst
+  loop - 2* negate >zst
+  set-sort reduce ;
+
+: setimage \ xt -- | s -- s'      "set image"
+  loc{ xt } 0
+  foreach 
+  do zst> xt execute >xst 1+
+  loop dup 0
+  do xst> >zst
+  loop 2* negate >zst
+  set-sort reduce ;
+
+: square dup * ;                \ x → x²
+: sqr>prime square nextprime ;  \ x → nextprime(x²)
+: sqr<prime square prevprime ;  \ x → prevprime(x²)
+: foo dup totients mod ;        \ x → x(mod ϕ(x)) Euler's totient.
+
+: paircond \ xt -- | s -- s'
+  loc{ xt } 0
+  foreach
+  do zdup zet> drop xt execute
+     if zst xst setmove 1+ else zdrop then
+  loop 6 * negate >xst
+  xst zst setmove ;
+
+: pairimage \ xt -- | s -- s'
+  loc{ xt } 0
+  foreach
+  do 1+ zet> drop xt execute >xst
+  loop dup 0 
+  do xst> >zst
+  loop 2* negate >zst
+  set-sort reduce ;
+
+: coprime ugcd 1 = ;
+: divide swap mod 0= ; 
 
 ?undef sp0 [if]
 s0 constant sp0
