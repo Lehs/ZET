@@ -1642,6 +1642,122 @@ false [if]
   do ad n str>vect zdup oddperm
      if zdrop then ad n nextp
   loop swap 1+ * negate >zst ;
+  
+\ Simple graphs
+
+: subgraph \ -- flag | (V,E) (V',E') -- 
+  unfence zrot unfence 
+  zrot subset
+  zswap subset and ;
+
+: edges~ \ E' V -- E
+  2 power# intersection ;
+
+: edges \ E' V -- E
+  0 >xst 
+  zst yst setmove 
+  foreach \ {u,v}∈E'
+  ?do zdup unfence yzcopy1 member 
+     if yzcopy1 member
+        if zfence xzmerge
+        else zdrop
+        then
+     else zst> drop zdrop
+     then
+  loop yst setdrop xst zst setmove ;
+
+: randgraph \ m n v -- | -- (V,E)
+  loc{ m n v } 
+  0 >xst
+  { v 0 do i 1+ loop } 
+  zdup 2 power# foreach \ {u,v}
+  do n random m < 
+     if zfence xzmerge
+     else zdrop
+     then
+  loop xst zst setmove pair ;
+
+\ V={x∈V'|y∈V" & {x,y}∈E'}
+\ E={{x,y}∈E'|x∈V & y∈V}
+: extend \ E' V" -- (V,E)
+  zswap zst yst setmove 
+  zst xst setcopy 
+  foreach \ v∈V"
+  do zst> yzcopy1
+     begin zst@ 
+     while zsplit zdup dup smember
+        if xzmerge
+        else zdrop
+        then
+     repeat zet> 2drop
+  loop xst zst setmove 
+  set-sort reduce
+  yst zst setmove 
+  zover edges pair ;
+
+: isolated-vertices# \ -- n | (V,E) --
+  unfence 0 dup loc{ flag }
+  zst yst setmove
+  foreach
+  do zst> yzcopy1 true to flag
+     begin zst@ flag and
+     while zsplit dup smember 0= to flag
+     repeat zdrop drop flag -
+  loop yst zst setmove zdrop ;
+
+: components# \ -- n | (V,E) --
+  zdup 0 >xst
+  unfence 
+  znip zst yst setcopy
+  foreach
+  do begin yzcopy1 zover
+        extend unfence zdrop ztuck zet=
+     until zfence xzmerge
+  loop yst setdrop 
+  xst zst setmove reduce cardinality
+  isolated-vertices# + ;
+
+: forest? \ -- flag | (V,E) -- 
+  zdup unfence 
+  cardinality \ e
+  cardinality \ v
+  components# \ c
+  rot + = ;
+
+: vector-sort \ s -- s'
+  set-sort zst> 1- >zst ;
+
+: cycle \ -- flag | E -- 
+  zdup multiunion 
+  zdup cardinality true loc{ v flag } 
+  zover zdup cardinality v = 0=
+  if triplet zdrop false exit 
+  then pair components# 1 > 
+  if zdrop false exit
+  then 0 >xst foreach
+  do xzmerge
+  loop xst zst setmove
+  zet> cs sort 2 - 0
+  do over = flag and to flag
+     over > flag and to flag 
+  +loop = flag and ;
+
+: clear-table \ s --
+  pad 0 foreach 
+  do zst> max
+  loop cells erase ;
+  
+: cyc!check \ n -- flag
+  cells pad + 1 over +! @ 2 > ;
+
+\ Test if (V,E) is 2-regular 
+: 2-regular \ -- flag | (V,E) --
+  unfence zswap clear-table
+  begin zst@ 
+  while zsplit unfence 
+     zst> cyc!check if zst> drop zdrop false exit then 
+     zst> cyc!check if zdrop false exit then
+  repeat zdrop true ;
 
 ?undef sp0 [if]
 s0 constant sp0
